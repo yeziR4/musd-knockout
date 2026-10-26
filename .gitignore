@@ -1,0 +1,10 @@
+.env
+.env.local
+contracts/out/
+contracts/cache/
+web/.next/
+web/node_modules/
+web/.vercel
+.claude/
+web/.env*.local
+contracts/broadcast/*/31611/dry-run/
