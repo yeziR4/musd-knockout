@@ -1,0 +1,7 @@
+{
+  "name": "knockout-keeper",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node keeper.mjs" },
+  "dependencies": { "viem": "2.21.55" }
+}

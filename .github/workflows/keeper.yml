@@ -1,0 +1,30 @@
+name: keeper
+
+# Draws finished Knockout rounds and refills the pot. Idempotent: most runs do nothing.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keeper
+  cancel-in-progress: false
+
+jobs:
+  keep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: keeper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node keeper.mjs
+        env:
+          JAR: "0xc2CED301f5545Ed6a67D593E9ec2b0651cDD5470"
+          DEPLOYER_KEY: ${{ secrets.KEEPER_KEY }}
+          SEED_MASTER: ${{ secrets.SEED_MASTER }}
