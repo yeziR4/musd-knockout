@@ -27,14 +27,28 @@ const cache: Cache = {
   blockTimes: new Map(),
 };
 
-async function blockTime(n: bigint) {
-  let t = cache.blockTimes.get(n);
-  if (t === undefined) {
-    t = Number((await client.getBlock({ blockNumber: n })).timestamp);
-    cache.blockTimes.set(n, t);
+/** Run `fn` over `items` with at most `limit` in flight; results keep input order. */
+async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
   }
-  return t;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
 }
+
+async function loadBlockTimes(blocks: bigint[]) {
+  const missing = [...new Set(blocks)].filter((n) => !cache.blockTimes.has(n));
+  await pool(missing, 10, async (n) => {
+    cache.blockTimes.set(n, Number((await client.getBlock({ blockNumber: n })).timestamp));
+  });
+}
+
+const blockTime = (n: bigint) => cache.blockTimes.get(n) ?? 0;
 
 function isWalletSeat(seat: Hex) {
   return BigInt(seat) >> 160n === 0n;
@@ -52,18 +66,35 @@ export function profileFor(seat: Hex, handles: Map<string, string>): Profile {
   return { seat, kind: "x", handle, name: handle ? `@${handle}` : "Reserved seat" };
 }
 
-async function scanLogs() {
+let scanning: Promise<void> | undefined;
+
+// Concurrent requests share one scan instead of each walking the history.
+function scanLogs() {
+  scanning ??= doScan().finally(() => {
+    scanning = undefined;
+  });
+  return scanning;
+}
+
+async function doScan() {
   if (!JAR) return;
   const head = await client.getBlockNumber();
-  while (cache.scannedTo < head) {
-    const fromBlock = cache.scannedTo + 1n;
-    const toBlock = fromBlock + LOG_WINDOW > head ? head : fromBlock + LOG_WINDOW;
-    const logs = await client.getContractEvents({
-      address: JAR,
-      abi: jarAbi,
-      fromBlock,
-      toBlock,
-    });
+  if (cache.scannedTo >= head) return;
+
+  // Fetch every 9k-block window in parallel, then all block timestamps in parallel,
+  // and only then apply events in chain order.
+  const windows: [bigint, bigint][] = [];
+  for (let from = cache.scannedTo + 1n; from <= head; from += LOG_WINDOW + 1n) {
+    windows.push([from, from + LOG_WINDOW > head ? head : from + LOG_WINDOW]);
+  }
+  const logs = (
+    await pool(windows, 6, ([fromBlock, toBlock]) =>
+      client.getContractEvents({ address: JAR!, abi: jarAbi, fromBlock, toBlock }),
+    )
+  ).flat();
+  await loadBlockTimes(logs.filter((l) => l.eventName !== "HandleSeat").map((l) => l.blockNumber));
+
+  {
     for (const log of logs) {
       if (log.eventName === "HandleSeat") {
         cache.handles.set(log.args.seat!.toLowerCase(), log.args.handle!);
@@ -80,14 +111,14 @@ async function scanLogs() {
             weight: a.weights![i],
           })),
           txHash: log.transactionHash,
-          timestamp: await blockTime(log.blockNumber),
+          timestamp: blockTime(log.blockNumber),
         });
         cache.activity.push({
           kind: "draw",
           seat: a.winner!,
           amount: a.prize!,
           roundId: Number(a.roundId),
-          timestamp: await blockTime(log.blockNumber),
+          timestamp: blockTime(log.blockNumber),
           txHash: log.transactionHash,
         });
       } else if (log.eventName === "Deposited") {
@@ -96,7 +127,7 @@ async function scanLogs() {
           kind: cache.seen.has(seat) ? "topup" : "join",
           seat: log.args.seat!,
           amount: log.args.amount!,
-          timestamp: await blockTime(log.blockNumber),
+          timestamp: blockTime(log.blockNumber),
           txHash: log.transactionHash,
         });
         cache.seen.add(seat);
@@ -104,13 +135,13 @@ async function scanLogs() {
         cache.activity.push({
           kind: "pot",
           amount: log.args.amount!,
-          timestamp: await blockTime(log.blockNumber),
+          timestamp: blockTime(log.blockNumber),
           txHash: log.transactionHash,
         });
       }
     }
-    cache.scannedTo = toBlock;
   }
+  cache.scannedTo = head;
 }
 
 export async function readJar(): Promise<JarState | null> {

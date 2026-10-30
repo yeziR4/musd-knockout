@@ -8,7 +8,7 @@ export async function GET() {
     const state = await readJar();
     if (!state) return new Response("null", { headers: { "content-type": "application/json" } });
     return new Response(toJson(state), {
-      headers: { "content-type": "application/json", "cache-control": "s-maxage=10, stale-while-revalidate=30" },
+      headers: { "content-type": "application/json", "cache-control": "s-maxage=15, stale-while-revalidate=86400" },
     });
   } catch (err) {
     console.error("state read failed", err);

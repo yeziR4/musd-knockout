@@ -16,12 +16,21 @@ export function winnerOf(d: Draw) {
 
 const sample = () => sampleState(winnerOf);
 
+// The last live state this browser saw, shown instantly on the next visit.
+const LAST_KEY = "knockout.lastState";
+
 export function useJar(pollMs = 15_000) {
   const [state, setState] = useState<JarState | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let alive = true;
+    try {
+      const last = localStorage.getItem(LAST_KEY);
+      if (last) setState((s) => s ?? fromJson(last));
+    } catch {
+      // storage unavailable or stale format: wait for the network
+    }
     async function load() {
       try {
         const res = await fetch("/api/state", { cache: "no-store" });
@@ -30,6 +39,13 @@ export function useJar(pollMs = 15_000) {
         if (!alive) return;
         setState(text === "null" ? sample() : fromJson(text));
         setError(false);
+        if (text !== "null") {
+          try {
+            localStorage.setItem(LAST_KEY, text);
+          } catch {
+            // quota or privacy mode: the cache is only a convenience
+          }
+        }
       } catch {
         if (!alive) return;
         setError(true);
