@@ -47,7 +47,7 @@ export function Avatar({
       {remote ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={`https://unavatar.io/x/${profile.handle}?fallback=false`}
+          src={`/api/avatar/${profile.handle}`}
           alt=""
           width={size}
           height={size}

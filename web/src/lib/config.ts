@@ -21,8 +21,6 @@ export const JAR: Address | undefined =
   (process.env.NEXT_PUBLIC_JAR_ADDRESS as Address | undefined) || undefined;
 export const JAR_DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_JAR_DEPLOY_BLOCK || "0");
 
-/** The X post people reply to for a free sponsored ticket. */
-export const JOIN_POST_URL = process.env.NEXT_PUBLIC_JOIN_POST_URL || "https://x.com";
 
 export const FAUCET_URL = "https://faucet.test.mezo.org";
 export const MEZO_TESTNET_APP = "https://testnet.mezo.org";

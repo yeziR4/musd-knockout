@@ -9,6 +9,7 @@ export const jarAbi = parseAbi([
   "function pot() view returns (uint256)",
   "function totalPrincipal() view returns (uint256)",
   "function allSeats() view returns (bytes32[] list, uint128[] weights)",
+  "function seatCount() view returns (uint256)",
   "function seats(bytes32) view returns (uint128 principal, uint128 prize, address sponsor, address owner)",
   "function walletSeat(address) pure returns (bytes32)",
   "function deposit(uint256 amount)",

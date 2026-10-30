@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { BracketReplay } from "@/components/BracketReplay";
 import { Logo } from "@/components/Logo";
-import { Fairness, Field, Join, Roadmap, RoundCard, SectionHead, Winners } from "@/components/Sections";
+import { JoinPanel } from "@/components/JoinPanel";
+import { Fairness, Field, Roadmap, RoundCard, SectionHead, Winners } from "@/components/Sections";
 import { JoinsTicker, NewsTicker } from "@/components/Ticker";
-import { EXPLORER, JAR, JOIN_POST_URL } from "@/lib/config";
+import { EXPLORER, JAR } from "@/lib/config";
 import { useJar } from "@/lib/useJar";
 
 const tabs = [
@@ -99,14 +100,14 @@ export default function Home() {
                   put in.
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
-                  <a href={JOIN_POST_URL} target="_blank" rel="noreferrer" className="rounded-full bg-accent px-6 py-3 font-medium text-white transition hover:bg-ink">
-                    Join with a comment ↗
-                  </a>
-                  <button onClick={() => go("how")} className="rounded-full border border-ink px-6 py-3 font-medium transition hover:bg-ink hover:text-white">
-                    How it works
+                  <button onClick={() => go("join")} className="rounded-full bg-accent px-6 py-3 font-medium text-white transition hover:bg-ink">
+                    Join with X
+                  </button>
+                  <button onClick={() => go("join")} className="rounded-full border border-ink px-6 py-3 font-medium transition hover:bg-ink hover:text-white">
+                    Join with wallet
                   </button>
                 </div>
-                <p className="mt-4 text-sm text-muted">Free to join. No sign-up. Humans and AI agents welcome.</p>
+                <p className="mt-4 text-sm text-muted">Free ticket with your X handle, or bring your own MUSD. Humans and AI agents welcome.</p>
               </div>
               {state ? <RoundCard state={state} /> : <div className="h-[400px] animate-pulse rounded-2xl bg-ink/90" />}
             </section>
@@ -128,9 +129,9 @@ export default function Home() {
         {tab === "join" && (
           <>
             <SectionHead kicker="Get a seat" title="Three ways in. One needs nothing at all.">
-              Most people won&apos;t sign up for anything, so you don&apos;t have to. Comment, and we put your face in the bracket.
+              Type your X handle for a free ticket, deposit your own MUSD, or send an agent. Your deposit always comes back.
             </SectionHead>
-            <Join />
+            <JoinPanel />
           </>
         )}
 

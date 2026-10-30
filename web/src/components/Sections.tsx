@@ -1,6 +1,6 @@
 "use client";
 
-import { EXPLORER, FAUCET_URL, JAR, JOIN_POST_URL, MEZO_TESTNET_APP } from "@/lib/config";
+import { EXPLORER } from "@/lib/config";
 import { ago, musd, pct, short } from "@/lib/format";
 import type { Draw, Entrant, JarState } from "@/lib/types";
 import { useNow, winnerOf } from "@/lib/useJar";
@@ -114,60 +114,6 @@ export function Field({ entrants, total }: { entrants: Entrant[]; total: bigint 
   );
 }
 
-export function Join() {
-  const cards = [
-    {
-      n: "01",
-      title: "Comment on our post",
-      body: "Reply to the pinned X post. We sponsor a ticket for your handle. No sign-up, no wallet, no gas. Your face goes straight into the bracket.",
-      cta: "Open the post",
-      href: JOIN_POST_URL,
-      tag: "Easiest",
-    },
-    {
-      n: "02",
-      title: "Bring your own MUSD",
-      body: "Grab test BTC from the faucet, mint or swap MUSD on Mezo testnet, then deposit. Your chance grows with your stack, and you can withdraw any time the round is open.",
-      cta: "Get test MUSD",
-      href: MEZO_TESTNET_APP,
-      second: { label: "Faucet", href: FAUCET_URL },
-    },
-    {
-      n: "03",
-      title: "Send your agent",
-      body: "Agents play by the same rules as humans: approve MUSD, call deposit(). They show up with a badge so you can see who wins more, people or bots.",
-      cta: "Contract",
-      href: JAR ? `${EXPLORER}/address/${JAR}` : EXPLORER,
-      code: "jar.deposit(10e18)",
-    },
-  ];
-  return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {cards.map((c) => (
-        <div key={c.n} className="flex flex-col rounded-2xl border border-line bg-card p-6">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-muted">{c.n}</span>
-            {c.tag && <span className="rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-medium text-white">{c.tag}</span>}
-          </div>
-          <h3 className="mt-4 text-xl font-semibold tracking-tight">{c.title}</h3>
-          <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{c.body}</p>
-          {c.code && <code className="mt-4 rounded-lg bg-paper px-3 py-2 font-mono text-xs">{c.code}</code>}
-          <div className="mt-5 flex gap-2">
-            <a href={c.href} target="_blank" rel="noreferrer" className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-white transition hover:bg-accent">
-              {c.cta} ↗
-            </a>
-            {c.second && (
-              <a href={c.second.href} target="_blank" rel="noreferrer" className="rounded-full border border-line px-4 py-2 text-sm font-medium transition hover:border-ink">
-                {c.second.label} ↗
-              </a>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function Winners({ draws }: { draws: Draw[] }) {
   if (draws.length === 0)
     return <p className="rounded-2xl border border-dashed border-line p-10 text-center text-muted">The first champion is crowned at the end of round #1.</p>;
@@ -256,7 +202,7 @@ const roadmap = [
     items: [
       "No-loss MUSD jar on Mezo testnet",
       "Weighted knockout bracket, replayable from chain",
-      "Comment-to-join: sponsored tickets for X handles",
+      "Join with X handle (free ticket) or wallet",
       "Agents in the same field as humans",
       "Wall of winners, with real MUSD bonus prizes",
     ],
