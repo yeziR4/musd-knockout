@@ -25,7 +25,7 @@ Knockout is no-loss prize savings on [Mezo](https://mezo.org). Everyone in the j
 | Path | What |
 |---|---|
 | `contracts/src/KnockoutJar.sol` | The jar: seats, deposits, bracket, commit-reveal draw |
-| `contracts/test/` | 20 Foundry tests, including fairness over 4,000 brackets, a 128-player draw, and the savings-vault pot |
+| `contracts/test/` | 20 Foundry tests (fairness over 4,000 brackets, a 128-player draw, the savings-vault pot) plus 3 fork tests against Mezo's real MUSD Savings Vault: `MEZO_FORK=1 forge test --match-contract SavingsFork` |
 | `contracts/ops.sh` | Operator chores: `status`, `draw`, `ticket <handle>` |
 | `web/` | Next.js site: live bracket replay, tickers, winners, roadmap |
 | `web/src/lib/bracket.ts` | TypeScript mirror of the bracket, which matched the contract in 300/300 random brackets (`web/scripts/parity.ts`) |

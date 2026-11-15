@@ -26,9 +26,11 @@ The pot was sponsor-funded, and the site described a block-hash draw that does n
 
 After the draw: round 2 open, `totalPrincipal` `10 MUSD`, vault `balanceOf(jar)` still `10 MUSD`. The keeper (GitHub Actions, every 30 minutes) locks and draws each round with the committed secret; in Wave 1 it ran 31 rounds without a failure.
 
+**Players moved to the vault jar.** All 48 Wave 1 seats (45 X handles and 3 agents) were withdrawn from the Wave 1 jar by their sponsors and re-entered in the Wave 2 jar with `keeper/migrate.mjs`, the same seats with the same stakes. The Wave 2 jar now holds 49 seats and 740 MUSD, all of it parked in Mezo's MUSD Savings Vault (`balanceOf(jar)` = 740 MUSD, idle MUSD in the jar = 0). The Wave 1 jar is empty; its 31 drawn rounds remain on-chain as history.
+
 Read at the deposit block: jar MUSD balance `0`, vault `balanceOf(jar)` `10 MUSD`, `totalPrincipal` `10 MUSD`, `pot` `0`. The pot is zero because the vault has not distributed yield to this deposit yet. Mezo pays that yield on its own schedule. `harvest()` is permissionless and will move it into the pot, minus the 10% fee.
 
-Tests: `cd contracts && forge test` — 20 passing, including park, fee, draw, and full withdrawal.
+Tests: `cd contracts && forge test` — 20 passing, including park, fee, draw, and full withdrawal. Plus 3 fork tests that run the jar against Mezo's **real** MUSDSavingsRate on a fork of Mezo testnet (deposit parks 1:1, harvest leaves principal untouched, full withdrawal, and the live jar holds at least every deposit): `MEZO_FORK=1 forge test --match-contract SavingsFork` — 3 passing.
 
 ## AKINDO fields
 
@@ -48,7 +50,7 @@ Tests: `cd contracts && forge test` — 20 passing, including park, fee, draw, a
 
 **Chain:** Mezo testnet (31611).
 
-**Status:** Existing Wave 1 project. New jar this wave, because the vault is wired in the contract.
+**Status:** Existing Wave 1 project. New jar this wave, because the vault is wired in the contract. All 48 Wave 1 players were moved into it.
 
 **Readiness:** Testnet deployment. Not audited. Do not use with real funds.
 
