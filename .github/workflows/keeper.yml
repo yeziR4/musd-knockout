@@ -25,6 +25,6 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: node keeper.mjs
         env:
-          JAR: "0xc2CED301f5545Ed6a67D593E9ec2b0651cDD5470"
+          JAR: "0x96649EeD4617c1CB9E253f0233D0A891069Da76C"
           DEPLOYER_KEY: ${{ secrets.KEEPER_KEY }}
           SEED_MASTER: ${{ secrets.SEED_MASTER }}

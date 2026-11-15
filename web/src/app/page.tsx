@@ -97,7 +97,7 @@ export default function Home() {
                 </h1>
                 <p className="mt-5 max-w-lg text-lg text-muted">
                   Everyone in the jar enters a knockout bracket. One champion takes the pot. Everyone else keeps every MUSD they
-                  put in.
+                  put in. Idle deposits sit in Mezo&apos;s savings vault. Ten percent of the yield pays the jar. The rest is the pot.
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <button onClick={() => go("join")} className="rounded-full bg-accent px-6 py-3 font-medium text-white transition hover:bg-ink">
@@ -161,7 +161,12 @@ export default function Home() {
       </main>
 
       <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 pb-6 text-xs text-muted sm:px-6">
-        <span>Mezo testnet · unaudited · test MUSD only</span>
+        <span>
+          Mezo testnet · unaudited · test MUSD only ·{" "}
+          <a className="hover:text-ink" href="https://explorer.test.mezo.org/address/0xc2CED301f5545Ed6a67D593E9ec2b0651cDD5470" target="_blank" rel="noreferrer">
+            Wave 1 jar
+          </a>
+        </span>
         {JAR && (
           <a href={`${EXPLORER}/address/${JAR}`} target="_blank" rel="noreferrer" className="font-mono hover:text-ink">
             contract {JAR.slice(0, 6)}…{JAR.slice(-4)} ↗

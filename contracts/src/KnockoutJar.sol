@@ -4,6 +4,18 @@ pragma solidity 0.8.24;
 interface IERC20 {
     function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+}
+
+/// @notice Mezo MUSD Savings Vault (`MUSDSavingsRate`). Not ERC-4626:
+/// deposit and withdraw are 1:1 in MUSD, and yield is claimed separately.
+interface ISavingsVault {
+    function deposit(uint256 amount) external;
+    function withdraw(uint256 amount) external;
+    function claimYield() external returns (uint256);
+    function claimableYield(address holder) external view returns (uint256);
+    function musdToken() external view returns (address);
     function balanceOf(address account) external view returns (uint256);
 }
 
@@ -15,7 +27,7 @@ interface IERC20 {
 /// match the chance of advancing is proportional to the two sides' weights, and the
 /// winner carries both weights forward. That makes each seat's chance of winning the
 /// whole bracket exactly its share of all deposits, while giving a live, watchable
-/// elimination. The winner takes the pot (sponsor top-ups now, vault yield later).
+/// elimination. The winner takes the pot: Mezo savings-vault yield, plus any sponsor top-up.
 ///
 /// Seats are either wallets (seat id = the address) or X handles (seat id =
 /// keccak256("x:" + lowercase handle)). A handle seat can be sponsored before its owner
@@ -31,6 +43,7 @@ contract KnockoutJar {
 
     uint256 public constant MAX_SEATS = 128;
     uint256 public constant DRAW_TIMEOUT = 1 days; // after this, anyone can unlock
+    uint16 public constant MAX_FEE_BPS = 2_000; // 20% of yield, hard cap
 
     IERC20 public immutable musd;
     address public operator;
@@ -48,6 +61,12 @@ contract KnockoutJar {
     uint256 public totalPrincipal;
     uint256 public totalPrizeOwed;
 
+    /// Mezo's MUSD Savings Vault. Unset until the operator calls `setSavings`.
+    /// While set, idle MUSD is parked 1:1 and `claimYield` funds the pot.
+    ISavingsVault public savings;
+    address public treasury;
+    uint16 public feeBps;
+
     mapping(bytes32 => Seat) public seats;
     bytes32[] internal seatList;
     mapping(bytes32 => uint256) internal seatPos; // index + 1, 0 = not listed
@@ -56,6 +75,8 @@ contract KnockoutJar {
     event Withdrawn(bytes32 indexed seat, address indexed sponsor, uint256 amount);
     event HandleSeat(bytes32 indexed seat, string handle);
     event PotFunded(address indexed from, uint256 amount);
+    event SavingsSet(address indexed vault, address indexed treasury, uint16 feeBps);
+    event YieldHarvested(uint256 gross, uint256 fee, uint256 net);
     event SeatBound(bytes32 indexed seat, address indexed owner);
     event PrizeClaimed(bytes32 indexed seat, address indexed owner, uint256 amount);
     event SeedCommitted(uint256 indexed roundId, bytes32 commit);
@@ -85,6 +106,8 @@ contract KnockoutJar {
     error TransferFailed();
     error NoCommit();
     error BadReveal();
+    error FeeTooHigh();
+    error SavingsAsset();
 
     modifier onlyOperator() {
         if (msg.sender != operator) revert NotOperator();
@@ -183,7 +206,30 @@ contract KnockoutJar {
     function fundPot(uint256 amount) external {
         if (amount == 0) revert ZeroAmount();
         _pull(amount);
+        _park();
         emit PotFunded(msg.sender, amount);
+    }
+
+    /// @notice Point the jar at Mezo's MUSD Savings Vault. Idle MUSD is parked 1:1.
+    /// Yield claimed from the vault, minus `feeBps_` (max 20%), is the pot.
+    /// Passing the zero vault withdraws any parked MUSD back to this contract.
+    function setSavings(ISavingsVault vault, address treasury_, uint16 feeBps_) external onlyOperator {
+        if (feeBps_ > MAX_FEE_BPS) revert FeeTooHigh();
+        if (treasury_ == address(0)) revert BadSeat();
+        if (address(vault) != address(0) && vault.musdToken() != address(musd)) revert SavingsAsset();
+        _exitSavings();
+        savings = vault;
+        treasury = treasury_;
+        feeBps = feeBps_;
+        emit SavingsSet(address(vault), treasury_, feeBps_);
+        _park();
+    }
+
+    /// @notice Claim vault yield, pay the fee, and park the rest so it compounds into the pot.
+    /// Anyone can call this.
+    function harvest() external returns (uint256 net) {
+        net = _harvestToCash();
+        _park();
     }
 
     // ----------------------------------------------------------------- rounds
@@ -216,6 +262,8 @@ contract KnockoutJar {
             weights[i] = seats[list[i]].principal;
         }
         bytes32 winner = list[bracketWinner(seed, weights)];
+        _harvestToCash();
+        _park();
         uint256 prize = pot();
         seats[winner].prize += uint128(prize);
         totalPrizeOwed += prize;
@@ -312,7 +360,16 @@ contract KnockoutJar {
     // ----------------------------------------------------------------- views
 
     function pot() public view returns (uint256) {
-        return musd.balanceOf(address(this)) - totalPrincipal - totalPrizeOwed;
+        return _assets() - totalPrincipal - totalPrizeOwed;
+    }
+
+    /// @notice MUSD held as cash, parked 1:1 in the savings vault, and net unclaimed yield.
+    function _assets() internal view returns (uint256 assets) {
+        assets = musd.balanceOf(address(this));
+        if (address(savings) == address(0)) return assets;
+        assets += savings.balanceOf(address(this));
+        uint256 gross = savings.claimableYield(address(this));
+        assets += gross - (gross * feeBps) / 10_000;
     }
 
     function seatCount() external view returns (uint256) {
@@ -362,6 +419,7 @@ contract KnockoutJar {
         seats[seat].principal += uint128(amount);
         totalPrincipal += amount;
         _pull(amount);
+        _park();
         emit Deposited(seat, msg.sender, amount);
     }
 
@@ -382,6 +440,47 @@ contract KnockoutJar {
     }
 
     function _send(address to, uint256 amount) internal {
+        _ensureCash(amount);
         if (!musd.transfer(to, amount)) revert TransferFailed();
+        _park();
+    }
+
+    /// @dev Pull yield and, if still short, 1:1 principal out of the vault.
+    function _ensureCash(uint256 amount) internal {
+        if (musd.balanceOf(address(this)) >= amount) return;
+        _harvestToCash();
+        uint256 cash = musd.balanceOf(address(this));
+        if (cash >= amount || address(savings) == address(0)) return;
+        savings.withdraw(amount - cash);
+    }
+
+    /// @dev Claim yield into cash and forward the fee. Returns the net left here.
+    function _harvestToCash() internal returns (uint256 net) {
+        if (address(savings) == address(0)) return 0;
+        if (savings.claimableYield(address(this)) == 0) return 0;
+        uint256 gross = savings.claimYield();
+        uint256 fee = (gross * feeBps) / 10_000;
+        net = gross - fee;
+        if (fee != 0) {
+            if (!musd.transfer(treasury, fee)) revert TransferFailed();
+        }
+        emit YieldHarvested(gross, fee, net);
+    }
+
+    /// @dev Deposit every loose MUSD into the vault. Principal stays 1:1.
+    function _park() internal {
+        if (address(savings) == address(0)) return;
+        uint256 cash = musd.balanceOf(address(this));
+        if (cash == 0) return;
+        if (!musd.approve(address(savings), cash)) revert TransferFailed();
+        savings.deposit(cash);
+    }
+
+    /// @dev Bring parked MUSD and unclaimed yield back to cash before swapping vaults.
+    function _exitSavings() internal {
+        if (address(savings) == address(0)) return;
+        _harvestToCash();
+        uint256 parked = savings.balanceOf(address(this));
+        if (parked != 0) savings.withdraw(parked);
     }
 }

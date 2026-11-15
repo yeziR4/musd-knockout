@@ -198,12 +198,104 @@ function SendAgent() {
   );
 }
 
+function MySeat() {
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+
+  async function act(kind: "withdraw" | "claim") {
+    const eth = (window as unknown as { ethereum?: EIP1193Provider }).ethereum;
+    if (!eth) return setStatus({ kind: "error", text: "No browser wallet found." });
+    if (!JAR) return setStatus({ kind: "error", text: "The jar isn't configured." });
+    try {
+      setStatus({ kind: "busy", text: "Connecting your wallet…" });
+      const wallet = createWalletClient({ chain: mezoTestnet, transport: custom(eth) });
+      const pub = createPublicClient({ chain: mezoTestnet, transport: http() });
+      const [account] = await wallet.requestAddresses();
+      try {
+        await wallet.switchChain({ id: mezoTestnet.id });
+      } catch {
+        await wallet.addChain({ chain: mezoTestnet });
+      }
+      const seat = await pub.readContract({
+        address: JAR,
+        abi: jarAbi,
+        functionName: "walletSeat",
+        args: [account],
+      });
+      const [principal, prize] = await pub.readContract({
+        address: JAR,
+        abi: jarAbi,
+        functionName: "seats",
+        args: [seat],
+      });
+      const amount = kind === "withdraw" ? principal : prize;
+      if (amount === 0n) {
+        return setStatus({
+          kind: "error",
+          text: kind === "withdraw" ? "This wallet has no deposit in the open round." : "This wallet has no prize to claim.",
+        });
+      }
+      const locked = await pub.readContract({ address: JAR, abi: jarAbi, functionName: "locked" });
+      if (kind === "withdraw" && locked) {
+        return setStatus({ kind: "error", text: "The round is locked for the draw. Withdraw once it reopens." });
+      }
+      setStatus({ kind: "busy", text: "Confirm in your wallet…" });
+      const hash = await wallet.writeContract({
+        account,
+        chain: mezoTestnet,
+        address: JAR,
+        abi: jarAbi,
+        functionName: kind === "withdraw" ? "withdraw" : "claimPrize",
+        args: kind === "withdraw" ? [seat, amount] : [seat],
+      });
+      await pub.waitForTransactionReceipt({ hash }).catch(() => undefined);
+      setStatus({
+        kind: "ok",
+        text: kind === "withdraw" ? "Deposit returned. Your MUSD is back in this wallet." : "Prize claimed.",
+        tx: hash,
+      });
+    } catch (err) {
+      const msg = (err as { shortMessage?: string }).shortMessage ?? "";
+      setStatus({ kind: "error", text: /reject|denied/i.test(msg) ? "Cancelled in your wallet." : msg || "The transaction failed." });
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-line bg-card p-6">
+      <h3 className="text-xl font-semibold tracking-tight">Your seat</h3>
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+        Withdraw your whole deposit while a round is open, or claim a prize. The pot is separate, so taking your deposit does not
+        touch anyone else&apos;s.
+      </p>
+      <div className="mt-5 flex flex-wrap gap-2">
+        <button
+          onClick={() => act("withdraw")}
+          disabled={status.kind === "busy"}
+          className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-white transition hover:bg-accent disabled:opacity-50"
+        >
+          Withdraw deposit
+        </button>
+        <button
+          onClick={() => act("claim")}
+          disabled={status.kind === "busy"}
+          className="rounded-full border border-ink px-4 py-2 text-sm font-medium transition hover:bg-ink hover:text-white disabled:opacity-50"
+        >
+          Claim prize
+        </button>
+      </div>
+      <StatusLine status={status} />
+    </div>
+  );
+}
+
 export function JoinPanel() {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <JoinWithX />
-      <JoinWithWallet />
-      <SendAgent />
-    </div>
+    <>
+      <div className="grid gap-4 md:grid-cols-3">
+        <JoinWithX />
+        <JoinWithWallet />
+        <SendAgent />
+      </div>
+      <MySeat />
+    </>
   );
 }

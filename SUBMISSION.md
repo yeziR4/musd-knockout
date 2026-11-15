@@ -1,5 +1,7 @@
 # Knockout: Wave 1 submission
 
+Wave 2 is in `WAVE2_SUBMISSION.md`. The live Wave 2 jar is `0x96649EeD4617c1CB9E253f0233D0A891069Da76C`. This file is the Wave 1 record.
+
 **Tagline:** A no-loss MUSD savings game where everyone enters a knockout bracket, the last one standing takes the pot, and nobody loses their stack.
 
 **Track:** 2: Access & Distribution (with a Track 1 yield roadmap)
@@ -23,7 +25,7 @@ Saving is boring, and small savers barely notice yield on a small balance. Getti
 
 ## Proof on testnet
 - Round 1 drawn: [tx](https://explorer.test.mezo.org/tx/0x259cfee60594a6e32494d9144ec9d23b01b321eb49b2c5efcabba19849513151)
-- Round 2: 39 players (36 X handles from comments + 3 agents). Draw tx: ROUND2_TX
+- Round 2: 39 players (36 X handles gifted free tickets from comments + 3 agents), drawn Oct 26 15:07 WAT. The replay is on the site's Live tab.
 - 16 Foundry tests, including a fairness test (4,000 brackets, win rates within 3 points of deposit share), a 128-player draw, commit-reveal checks, and the 24h escape hatch.
 - Site/contract parity: the site's bracket replay picked the same champion as the contract in 300 of 300 random brackets.
 
@@ -45,6 +47,7 @@ Saving is boring, and small savers barely notice yield on a small balance. Getti
 - Stronger randomness (drand / VRF)
 
 ## Links
-- Live app: SITE_URL
-- Code: REPO_URL
+- Live app: https://knockout-musd.vercel.app
+- Code: https://github.com/yeziR4/musd-knockout
+- Launch post: https://x.com/Mr_Hy4/status/2114713598421328345
 - Demo video: VIDEO_URL

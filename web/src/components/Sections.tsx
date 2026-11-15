@@ -170,15 +170,15 @@ export function Fairness() {
   const items = [
     {
       title: "Your deposit is never on the line",
-      body: "The contract keeps every deposit separate from the pot. Withdraw all of it whenever a round is open. Only the pot changes hands.",
+      body: "Idle MUSD is parked 1:1 in Mezo's MUSD Savings Vault. Withdraw all of it whenever a round is open. The vault's yield, minus a 10% fee, is the only MUSD the winner takes.",
     },
     {
       title: "The bracket is fair by design",
       body: "In each match your odds are your stack against theirs. The winner absorbs the loser's stack. Do the maths and your chance to win it all is exactly your share of the jar.",
     },
     {
-      title: "Nobody picks the seed",
-      body: "When a round closes, the contract commits to a block that doesn't exist yet. Its hash seeds the bracket. Anyone can replay the draw from the chain and get the same champion.",
+      title: "The draw is committed before anyone enters",
+      body: "Mezo's BLOCKHASH opcode returns zero, so a future block hash cannot seed a draw. The operator commits a secret's hash when the round opens, before deposits. The reveal is checked on chain, and anyone can replay the bracket from the Drawn event. If the secret is never revealed, anyone can unlock the round after 24 hours.",
     },
   ];
   return (
@@ -197,8 +197,8 @@ export function Fairness() {
 const roadmap = [
   {
     phase: "Wave 1",
-    when: "Live now",
-    current: true,
+    when: "Shipped",
+    current: false,
     items: [
       "No-loss MUSD jar on Mezo testnet",
       "Weighted knockout bracket, replayable from chain",
@@ -209,14 +209,13 @@ const roadmap = [
   },
   {
     phase: "Wave 2",
-    when: "Nov 2 – 15",
+    when: "This submission",
+    current: true,
     items: [
-      "Pot funded by Mezo's MUSD Savings Vault (sMUSD) yield",
-      "Sign in with X, wallet created for you",
-      "Claim prizes with a signed X proof, no operator in the loop",
-      "Telegram bot and automatic X winner posts",
-      "BTC in, tickets out: one-step swap to MUSD",
-      "Open arena: any agent can join",
+      "Idle MUSD parked 1:1 in Mezo's MUSD Savings Vault",
+      "Pot is claimYield(), minus a 10% fee to the treasury",
+      "Principal stays withdrawable. The fee never touches it",
+      "Withdraw and claim from the site, with the transaction linked",
     ],
   },
   {
