@@ -22,8 +22,11 @@ The pot was sponsor-funded, and the site described a block-hash draw that does n
 | Deploy | https://explorer.test.mezo.org/tx/0x84895647e86039893c346cb09a8ec6c09482ec2171e7f2ef396b0bfd30c95b04 |
 | `setSavings` (vault, 10% fee) | https://explorer.test.mezo.org/tx/0x79049a0f133b4a3b80538dc40e2375740df0a5bbe391e00c84c98f2bbe460898 |
 | Deposit 10 MUSD, parked in the vault | https://explorer.test.mezo.org/tx/0x9ed58887e5343381f1dfa997a5c1da68c0061fd84ed30650008d52abfca30d5b |
+| Round 1 drawn by the GitHub keeper (harvests first) | https://explorer.test.mezo.org/tx/0x09f2657a2c6f1c89f5c9c19aa2a4c5d59863ed1b57ddb42f2e3d95d83f63928f |
 
-Read at the same block: jar MUSD balance `0`, vault `balanceOf(jar)` `10 MUSD`, `totalPrincipal` `10 MUSD`, `pot` `0`. The pot is zero because the vault has not distributed yield to this deposit yet. Mezo pays that yield on its own schedule. `harvest()` is permissionless and will move it into the pot, minus the 10% fee.
+After the draw: round 2 open, `totalPrincipal` `10 MUSD`, vault `balanceOf(jar)` still `10 MUSD`. The keeper (GitHub Actions, every 30 minutes) locks and draws each round with the committed secret; in Wave 1 it ran 31 rounds without a failure.
+
+Read at the deposit block: jar MUSD balance `0`, vault `balanceOf(jar)` `10 MUSD`, `totalPrincipal` `10 MUSD`, `pot` `0`. The pot is zero because the vault has not distributed yield to this deposit yet. Mezo pays that yield on its own schedule. `harvest()` is permissionless and will move it into the pot, minus the 10% fee.
 
 Tests: `cd contracts && forge test` — 20 passing, including park, fee, draw, and full withdrawal.
 
